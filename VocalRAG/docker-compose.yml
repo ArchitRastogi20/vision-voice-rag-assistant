@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  landing-page:
+    image: nginx:alpine
+    container_name: multimodal-ai-landing-page
+    ports:
+      - "8080:80"
+    volumes:
+      - ./landing-page:/usr/share/nginx/html:ro
+    networks:
+      - app-network
+
+  vocal-rag-frontend:
+    build: ./vocal-rag-frontend
+    container_name: multimodal-ai-vocal-rag-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - app-network
+
+  orchestrator:
+    build: .
+    container_name: multimodal-ai-orchestrator
+    ports:
+      - "8081:8080"
+    environment:
+      - ASR_SERVICE=http://asr-service:8001
+      - TTS_SERVICE=http://tts-service:8000
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - asr-service
+      - tts-service
+    networks:
+      - app-network
+
+  asr-service:
+    build: ./asr-service
+    container_name: multimodal-ai-asr-service
+    ports:
+      - "8001:8001"
+    networks:
+      - app-network
+
+  tts-service:
+    build: ./tts-service
+    container_name: multimodal-ai-tts-service
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+  food-recognition:
+    build: ./food-recognition
+    container_name: multimodal-ai-food-recognition
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true

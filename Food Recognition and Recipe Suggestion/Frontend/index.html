@@ -1,0 +1,326 @@
+<!--<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Suggestor</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <a href="http://localhost:8080" class="home-button"><i data-feather="home"></i> Home</a>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        feather.replace();
+    </script>
+    <div class="container">
+        <h1 class="upload-heading">Get Your Recipe For The Items You Have</h1>
+        <button class="refresh-button" id="refreshButton" type="button" onclick="refreshPage()" label="Click here">
+            <span>Click here to try new recipe</span> &#8634;
+        </button>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="imageInput" name="image" accept=".jpg, .jpeg, .png" multiple>
+            <div class="selected-files" id="selectedFiles"></div>
+            <div class="cuisine-container">
+                <div class="cuisine">
+                    <label for="cuisineInput">Cuisine:</label>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_American" name="cuisine[]" value="American">
+                        <label for="cuisineInput_American">American</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_Italian" name="cuisine[]" value="Italian">
+                        <label for="cuisineInput_Italian">Italian</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_Chinese" name="cuisine[]" value="Chinese">
+                        <label for="cuisineInput_Chinese">Chinese</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_Indian" name="cuisine[]" value="Indian">
+                        <label for="cuisineInput_Indian">Indian</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_Turkish" name="cuisine[]" value="Turkish">
+                        <label for="cuisineInput_Turkish">Turkish</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="cuisineInput_Any" name="cuisine[]" value="Any">
+                        <label for="cuisineInput_Any">Any</label>
+                    </div>
+                </div>
+            </div>
+            <button id="submitButton" type="submit">Get Recipe</button>
+        </form>
+        <br>
+        <div class="resultContainer" id="itemsContainer" style="display: none;"></div>
+        <div class="resultContainer" id="noimgContainer" style="display: none;"></div>
+        <div class="resultContainer" id="noextContainer" style="display: none;"></div>
+        <div class="resultContainer" id="notimgContainer" style="display: none;"></div>
+        <div class="resultContainer" id="noimgextContainer" style="display: none;"></div>
+        <div class="resultContainer" id="undetectedContainer" style="display: none;"></div>
+        <div class="resultContainer" id="resultContainer" style="display: none;"></div>
+        <div class="feedbackContainer" id="feedbackContainer" style="display: none;">
+            <textarea id="feedback" name="feedback"
+                placeholder="Please write here if you want anything else"></textarea>
+            <button id="submitFeedback">Submit</button>
+        </div>
+        <div class="feedbackResult" id="feedbackResult" style="display: none;"></div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <script>
+        // Function to lock submit button if any result container is not empty
+        function lockSubmitButton() {
+            const resultContainers = document.querySelectorAll(".resultContainer");
+            const submitButton = document.getElementById("submitButton");
+
+            // Iterate through each result container
+            for (let i = 0; i < resultContainers.length; i++) {
+                const container = resultContainers[i];
+
+                // Check if the container is not empty and visible
+                if (container.innerHTML.trim() !== "" && container.style.display !== "none") {
+                    submitButton.disabled = true;
+                    return; // Exit the function once a non-empty container is found
+                }
+            }
+
+            // Enable the submit button if all result containers are empty
+            submitButton.disabled = false;
+        }
+
+        // Lock submit button on page load
+        window.onload = function () {
+            lockSubmitButton();
+        }
+
+        // Function to refresh the page
+        function refreshPage() {
+            location.reload();
+        }
+
+        // Function to check if any of the result containers are not empty
+        function checkResultContainers() {
+            const resultContainers = document.querySelectorAll(".resultContainer");
+
+            // Iterate through each result container
+            for (let i = 0; i < resultContainers.length; i++) {
+                const container = resultContainers[i];
+
+                // Check if the container is not empty
+                if (container.innerHTML.trim() !== "") {
+                    refreshPage(); // Reload the page
+                    return; // Exit the function once a non-empty container is found
+                }
+            }
+        }
+
+        // Add an event listener to the file input
+        document.getElementById("imageInput").addEventListener("click", function () {
+            checkResultContainers(); // Check if any result container is not empty
+        });
+
+    </script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+</body>
+
+</html>-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Lens – Recipe Suggestor</title>
+
+    <!-- Main theme CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Background Glows -->
+    <div class="background-globes">
+        <div class="globe globe-1"></div>
+        <div class="globe globe-2"></div>
+    </div>
+
+    <!-- Home button OUTSIDE the header -->
+
+
+    <!-- Background Glows -->
+    <div class="background-globes">
+        <div class="globe globe-1"></div>
+        <div class="globe globe-2"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <div class="header-left">
+                <a href="http://localhost:8080" class="home-button" title="Back to Home">
+                    <i data-feather="home"></i>
+                    <span>Home</span>
+                </a>
+            </div>
+
+            <div class="header-center">
+                <h1 class="header-title">Food Lens – Recipe Suggestor</h1>
+            </div>
+
+            <div class="header-right"></div>
+        </div>
+    </header>
+
+    <!-- Main Page Layout -->
+    <main class="page-layout">
+        <div class="container">
+            <h1 class="upload-heading">Get Your Recipe For The Items You Have</h1>
+            <p class="upload-subtitle">
+                Upload one or more food images, choose your preferred cuisines, and let the AI create recipes for you.
+            </p>
+
+            <!-- Upload Form Card -->
+            <form id="uploadForm" enctype="multipart/form-data" class="upload-form">
+                <!-- File Input -->
+                <label for="imageInput" class="input-label">Upload Images</label>
+                <input type="file" id="imageInput" name="image" accept=".jpg, .jpeg, .png" multiple>
+
+                <!-- Selected Files Thumbnails -->
+                <div class="selected-files" id="selectedFiles"></div>
+
+                <!-- Cuisine Selection -->
+                <div class="cuisine-wrapper">
+                    <p class="cuisine-title">Choose Cuisine</p>
+                    <div class="cuisine-container">
+                        <div class="cuisine">
+                            <div>
+                                <input type="checkbox" id="cuisineInput_American" name="cuisine[]" value="American">
+                                <label for="cuisineInput_American">American</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="cuisineInput_Italian" name="cuisine[]" value="Italian">
+                                <label for="cuisineInput_Italian">Italian</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="cuisineInput_Chinese" name="cuisine[]" value="Chinese">
+                                <label for="cuisineInput_Chinese">Chinese</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="cuisineInput_Indian" name="cuisine[]" value="Indian">
+                                <label for="cuisineInput_Indian">Indian</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="cuisineInput_Turkish" name="cuisine[]" value="Turkish">
+                                <label for="cuisineInput_Turkish">Turkish</label>
+                            </div>
+                            <div>
+                                <input type="checkbox" id="cuisineInput_Any" name="cuisine[]" value="Any">
+                                <label for="cuisineInput_Any">Any</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="submit-row">
+                    <button id="submitButton" type="submit">Get Recipe</button>
+                </div>
+            </form>
+
+            <!-- Results & Messages -->
+            <section class="results-section">
+                <div class="resultContainer" id="itemsContainer" style="display: none;"></div>
+                <div class="resultContainer" id="noimgContainer" style="display: none;"></div>
+                <div class="resultContainer" id="noextContainer" style="display: none;"></div>
+                <div class="resultContainer" id="notimgContainer" style="display: none;"></div>
+                <div class="resultContainer" id="noimgextContainer" style="display: none;"></div>
+                <div class="resultContainer" id="undetectedContainer" style="display: none;"></div>
+                <div class="resultContainer" id="resultContainer" style="display: none;"></div>
+            </section>
+
+            <!-- Feedback Area -->
+            <section class="feedback-section">
+                <div class="feedbackContainer" id="feedbackContainer" style="display: none;">
+                    <textarea id="feedback" name="feedback"
+                        placeholder="Please write here if you want anything else"></textarea>
+                    <button id="submitFeedback" type="button">Submit Feedback</button>
+                </div>
+                <div class="feedbackResult" id="feedbackResult" style="display: none;"></div>
+                <div id="errorMessage" class="error-message"></div>
+            </section>
+        </div>
+
+        <!-- Floating Refresh Button -->
+        <button class="refresh-button" id="refreshButton" type="button" onclick="refreshPage()">
+            <span>Try New Recipe</span> &#8634;
+        </button>
+    </main>
+
+    <!-- Lock / Refresh Logic (kept from original) -->
+    <script>
+        // Function to lock submit button if any result container is not empty
+        function lockSubmitButton() {
+            const resultContainers = document.querySelectorAll(".resultContainer");
+            const submitButton = document.getElementById("submitButton");
+
+            for (let i = 0; i < resultContainers.length; i++) {
+                const container = resultContainers[i];
+                if (container.innerHTML.trim() !== "" && container.style.display !== "none") {
+                    submitButton.disabled = true;
+                    return;
+                }
+            }
+            submitButton.disabled = false;
+        }
+
+        // Function to refresh the page
+        function refreshPage() {
+            location.reload();
+        }
+
+        // Function to check if any of the result containers are not empty
+        function checkResultContainers() {
+            const resultContainers = document.querySelectorAll(".resultContainer");
+            for (let i = 0; i < resultContainers.length; i++) {
+                const container = resultContainers[i];
+                if (container.innerHTML.trim() !== "") {
+                    refreshPage();
+                    return;
+                }
+            }
+        }
+
+        window.onload = function () {
+            lockSubmitButton();
+            const imageInput = document.getElementById("imageInput");
+            if (imageInput) {
+                imageInput.addEventListener("click", function () {
+                    checkResultContainers();
+                });
+            }
+        }
+    </script>
+
+    <!-- App Logic -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+
+</html>

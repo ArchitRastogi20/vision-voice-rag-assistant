@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+  # ---------------------------
+  # Unified Landing Page
+  # ---------------------------
+  landing-page:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./unified-frontend:/usr/share/nginx/html
+    networks:
+      - multimodal-network
+
+  # ---------------------------
+  # App 1: Food Recognition
+  # ---------------------------
+  food-recognition:
+    build:
+      context: "./Food Recognition and Recipe Suggestion"
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./benchmark_data:/app/benchmark_data
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    networks:
+      - multimodal-network
+
+  # ---------------------------
+  # App 2: Vocal RAG Services
+  # ---------------------------
+
+  # ASR Service (Whisper)
+  asr-service:
+    build: ./VocalRAG/asr-service
+    ports:
+      - "8001:8001"
+    networks:
+      - multimodal-network
+
+  # TTS Service (Piper)
+  tts-service:
+    build: ./VocalRAG/tts-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./VocalRAG/tts-service/models:/app/models
+    networks:
+      - multimodal-network
+
+  # Orchestrator (Backend)
+  orchestrator:
+    build: ./VocalRAG/orchestrator
+    ports:
+      - "8081:8080"
+    depends_on:
+      - asr-service
+      - tts-service
+    volumes:
+      - ./benchmark_data:/app/benchmark_data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MONGODB_URI=mongodb://host.docker.internal:27017
+      - ASR_SERVICE_URL=http://asr-service:8001
+      - TTS_SERVICE_URL=http://tts-service:8000
+    networks:
+      - multimodal-network
+
+  # ---------------------------
+  # Frontend (Vocal RAG UI)
+  # ---------------------------
+  vocal-rag-frontend:
+    build: ./VocalRAG/frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - orchestrator
+    networks:
+      - multimodal-network
+
+networks:
+  multimodal-network:
+    driver: bridge
