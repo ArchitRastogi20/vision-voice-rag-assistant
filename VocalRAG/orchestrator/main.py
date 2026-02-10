@@ -15,6 +15,7 @@ from openai import OpenAI
 import re
 import time
 import csv
+import requests
 
 app = FastAPI()
 
@@ -38,6 +39,11 @@ ASR_SERVICE = os.getenv("ASR_SERVICE", "http://asr-service:8001")
 TTS_SERVICE = os.getenv("TTS_SERVICE", "http://tts-service:8000")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://mongodb:27017/")
 
+# LLM Configuration
+IS_GPT = os.getenv("IS_GPT", "0") == "1"  # 0 = OpenRouter, 1 = GPT
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = "openai/gpt-oss-120b:free"
+
 # MongoDB setup
 mongo_client = MongoClient(MONGODB_URI)
 db = mongo_client["multimodal_rag"]
@@ -46,7 +52,7 @@ documents_collection = db["documents"]
 chunks_collection = db["chunks"]
 conversations_collection = db["conversations"]
 
-# OpenAI setup
+# OpenAI setup (only used if IS_GPT=1)
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
 # In-memory session store (simple)
@@ -95,6 +101,65 @@ def clean_markdown(text: str) -> str:
     text = re.sub(r'\.{2,}', '.', text)
     
     return text.strip()
+
+
+# ============= LLM FUNCTIONS =============
+def call_openrouter(system_prompt: str, user_prompt: str) -> str:
+    """Call OpenRouter API"""
+    if not OPENROUTER_API_KEY:
+        return "OpenRouter API key not configured"
+    
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "VocalRAG",
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": 0.7,
+                "max_tokens": 300,
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"].strip()
+    except requests.RequestException as e:
+        print(f"OpenRouter error: {e}")
+        return f"Error calling OpenRouter: {str(e)}"
+
+
+def call_gpt(system_prompt: str, user_prompt: str) -> str:
+    """Call OpenAI GPT API"""
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error calling GPT: {str(e)}"
+
+
+def call_llm(system_prompt: str, user_prompt: str) -> str:
+    """Call the appropriate LLM based on IS_GPT config"""
+    if IS_GPT:
+        return call_gpt(system_prompt, user_prompt)
+    else:
+        return call_openrouter(system_prompt, user_prompt)
 
 
 # ============= AUTHENTICATION =============
@@ -260,8 +325,9 @@ async def rag_pipeline(query: str, username: str) -> str:
     # Create context
     context = "\n\n".join(f"[Chunk {i+1}]: {chunk}" for i, chunk in enumerate(relevant_chunks))
     
-    # Create prompt
-    prompt = f"""You are a helpful assistant. Answer the user's question based on the following context from their documents.
+    # Create prompts
+    system_prompt = "You are a helpful assistant that answers questions based on provided context."
+    user_prompt = f"""You are a helpful assistant. Answer the user's question based on the following context from their documents.
 
 Context:
 {context}
@@ -270,22 +336,15 @@ Question: {query}
 
 Answer: """
     
-    # Call ChatGPT
+    # Call LLM (GPT or OpenRouter based on IS_GPT)
     try:
         start_time = time.time()
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on provided context."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=300
-        )
+        answer = call_llm(system_prompt, user_prompt)
         end_time = time.time()
-        log_latency("gpt", (end_time - start_time) * 1000)
-
-        answer = response.choices[0].message.content.strip()
+        
+        # Log with appropriate component name
+        component = "gpt" if IS_GPT else "openrouter"
+        log_latency(component, (end_time - start_time) * 1000)
         
         # Clean markdown formatting
         answer = clean_markdown(answer)
@@ -411,9 +470,18 @@ async def get_documents(session_id: str):
     return JSONResponse({"documents": docs})
 
 
+@app.get("/api/config")
+async def get_config():
+    """Get current LLM configuration"""
+    return JSONResponse({
+        "is_gpt": IS_GPT,
+        "model": "gpt-4o-mini" if IS_GPT else OPENROUTER_MODEL
+    })
+
+
 @app.get("/")
 async def health():
-    return {"status": "Orchestrator service running"}
+    return {"status": "Orchestrator service running", "llm": "GPT" if IS_GPT else "OpenRouter"}
 
 
 if __name__ == "__main__":
